@@ -21,9 +21,9 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	initDB()
-	runMigrations()
+	//runMigrations()
 	router := gin.Default()
-	//router.GET("/tasks", getTasks)
+	router.GET("/tasks", getTasks)
 	//router.POST("/tasks", createTask)
 	//router.PUT("/tasks/:id", updateTask)
 	//router.DELETE("/tasks/:id", deleteTask)
@@ -53,3 +53,55 @@ func runMigrations() {
 		log.Fatal(err)
 	}
 }
+
+func getTasks(c *gin.Context) {
+	rows, err := db.Query("SELECT id, title, description, completed, created_at, updated_at FROM tasks ORDER BY created_at DESC")
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch tasks"})
+		return
+	}
+	defer rows.Close()
+
+	var tasks []gin.H
+	for rows.Next() {
+		var id int
+		var title, description string
+		var completed bool
+		var createdAt, updatedAt string
+
+		err := rows.Scan(&id, &title, &description, &completed, &createdAt, &updatedAt)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to scan task"})
+			return
+		}
+
+		tasks = append(tasks, gin.H{
+			"id":          id,
+			"title":       title,
+			"description": description,
+			"completed":   completed,
+			"created_at":  createdAt,
+			"updated_at":  updatedAt,
+		})
+	}
+
+	if err = rows.Err(); err != nil {
+		c.JSON(500, gin.H{"error": "Error iterating tasks"})
+		return
+	}
+
+	c.JSON(200, gin.H{"tasks": tasks})
+}
+
+func createTask(c *gin.Context) {
+
+}
+
+/*func updateTask(c *gin.Context) {
+
+}
+
+func deleteTask(c *gin.Context) {
+	
+}
+*/
