@@ -24,7 +24,7 @@ func main() {
 	//runMigrations()
 	router := gin.Default()
 	router.GET("/tasks", getTasks)
-	//router.POST("/tasks", createTask)
+	router.POST("/tasks", createTask)
 	//router.PUT("/tasks/:id", updateTask)
 	//router.DELETE("/tasks/:id", deleteTask)
 	router.Run(":8080")
@@ -94,7 +94,31 @@ func getTasks(c *gin.Context) {
 }
 
 func createTask(c *gin.Context) {
+	var task struct {
+		Title       string `json:"title" binding:"required"`
+		Description string `json:"description"`
+	}
 
+	if err := c.ShouldBindJSON(&task); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	var id int
+	err := db.QueryRow(
+		"INSERT INTO tasks (title, description) VALUES ($1, $2) RETURNING id",
+		task.Title, task.Description,
+	).Scan(&id)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to create task"})
+		return
+	}
+
+	c.JSON(201, gin.H{
+		"message": "Task created successfully",
+		"id":      id,
+	})
 }
 
 /*func updateTask(c *gin.Context) {
